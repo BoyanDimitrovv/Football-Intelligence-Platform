@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Начало — Football Intelligence Platform{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <div class="hero-content">
+    <span class="badge">Етап 1 · Основа</span>
+    <h1>Football Intelligence Platform</h1>
+    <p>
+      Интелигентна платформа за футболен скаутинг, която ще комбинира
+      база данни, машинно обучение и AI асистент за препоръчване на
+      футболисти според нуждите на отбора.
+    </p>
+    <div class="hero-actions">
+      <a class="button primary" href="{{ url_for('health') }}">Проверка на статуса</a>
+    </div>
+  </div>
+</section>
+
+<section class="cards">
+  <article class="card">
+    <h2>Какво е готово</h2>
+    <p>Базова структура на проекта, Flask приложение, SQLite връзка, начална страница и стилове.</p>
+  </article>
+  <article class="card">
+    <h2>Какво следва</h2>
+    <p>Модел на базата данни, CRUD за играчи, търсене/филтриране и готов интерфейс.</p>
+  </article>
+  <article class="card">
+    <h2>Технологии</h2>
+    <p>Python, Flask, SQLite, Jinja2 шаблони, HTML, CSS и JavaScript.</p>
+  </article>
+</section>
+{% endblock %}

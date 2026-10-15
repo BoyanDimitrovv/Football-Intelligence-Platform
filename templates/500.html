@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block title %}Сървърна грешка — Football Intelligence Platform{% endblock %}
+
+{% block content %}
+<section class="error-page">
+  <h1>500</h1>
+  <h2>Възникна сървърна грешка</h2>
+  <p>Моля, опитай отново по-късно или се върни към <a href="{{ url_for('index') }}">началната страница</a>.</p>
+</section>
+{% endblock %}
