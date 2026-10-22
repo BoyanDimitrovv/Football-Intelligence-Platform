@@ -4,8 +4,12 @@
 
 {% block content %}
 <section class="error-page">
-  <h1>500</h1>
+  <div class="code">500</div>
   <h2>Възникна сървърна грешка</h2>
-  <p>Моля, опитай отново по-късно или се върни към <a href="{{ url_for('index') }}">началната страница</a>.</p>
+  <p>Моля, опитайте отново по-късно. Ако проблемът продължава, проверете статус endpoint-а.</p>
+  <div class="hero-actions" style="justify-content: center">
+    <a class="button primary" href="{{ url_for('index') }}">Към началната страница</a>
+    <a class="button ghost" href="{{ url_for('health') }}">Провери статуса</a>
+  </div>
 </section>
 {% endblock %}

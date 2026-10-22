@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+{% from "_macros.html" import money, position_color %}
+
+{% block title %}Сравнение на играчи — Football Intelligence Platform{% endblock %}
+
+{% block content %}
+{% set radar_labels = ['Скорост', 'Удар', 'Пасове', 'Дрибъл', 'Защита', 'Физика'] %}
+{% set radar_series = [] %}
+{% for item in selected %}
+  {% set _ = radar_series.append({
+    'name': item.name,
+    'color': position_color(item.position),
+    'values': [item.pace, item.shooting, item.passing, item.dribbling, item.defending, item.physical]
+  }) %}
+{% endfor %}
+{% set radar_payload = {'labels': radar_labels, 'series': radar_series} %}
+
+<section class="section-head">
+  <div>
+    <h2>Сравнение на футболисти</h2>
+    <p class="subtitle">До четирима играча едновременно — атрибути, форма, стойност и AI оценка.</p>
+  </div>
+  <a class="button small" href="{{ url_for('players') }}">Добави още играчи →</a>
+</section>
+
+<form class="filter-panel" method="get" action="{{ url_for('compare') }}">
+  <div class="filter-grid">
+    {% for slot in range(4) %}
+      {% set current = ids[slot] if slot < ids|length else '' %}
+      <div class="field">
+        <label for="slot-{{ slot }}">Играч {{ slot + 1 }}</label>
+        <select id="slot-{{ slot }}" name="ids" data-slot="{{ slot }}">
+          <option value="">— празно —</option>
+          {% for player in all_players %}
+            <option value="{{ player.id }}" {{ 'selected' if player.id == current }}>
+              {{ player.name }} · {{ position_labels.get(player.position, player.position) }} · {{ player.overall }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+    {% endfor %}
+  </div>
+  <div class="filter-actions">
+    <button class="button primary" type="submit">Сравни</button>
+    <a class="button ghost" href="{{ url_for('compare') }}">Изчисти</a>
+  </div>
+</form>
+
+{% if selected %}
+<section class="section grid-{{ selected|length if selected|length in [2, 3, 4] else 4 }}">
+  {% for item in selected %}
+  {% set analysis = analyses.get(item.id) %}
+  <article class="player-card" style="--pos-color: {{ position_color(item.position) }}">
+    <div class="card-top">
+      <div>
+        <a class="name" href="{{ url_for('player_detail', player_id=item.id) }}">{{ item.name }}</a>
+        <div class="meta">{{ item.team_name or 'Без отбор' }}<span class="dot">•</span>{{ item.age }} г.<span class="dot">•</span>{{ item.nationality }}</div>
+      </div>
+      <div class="ring" style="--pct: {{ item.overall }}; --ring-color: {{ position_color(item.position) }}">
+        <div class="ring-value">{{ item.overall }}</div>
+      </div>
+    </div>
+    <div style="display: flex; gap: 0.4rem; flex-wrap: wrap">
+      <span class="pos-chip" style="--pos-color: {{ position_color(item.position) }}">{{ position_labels.get(item.position, item.position) }}</span>
+      <span class="tag">Потенциал {{ item.potential }}</span>
+      <span class="tag team" style="--team-color: {{ item.team_color or '#22d37a' }}">{{ money(item.market_value) }}</span>
+    </div>
+    <div class="card-stats">
+      <div><span class="k">AI скор</span><span class="v" style="color: var(--accent)">{{ "%.0f"|format(analysis.score) if analysis else '-' }}</span></div>
+      <div><span class="k">Форма</span><span class="v">{{ item.form }}</span></div>
+      <div><span class="k">Травма</span><span class="v">{{ item.injury_risk }}%</span></div>
+    </div>
+    <div class="card-footer">
+      <a href="{{ url_for('player_detail', player_id=item.id) }}">Профил →</a>
+      <a href="{{ url_for('recommendations') }}">Препоръки</a>
+    </div>
+  </article>
+  {% endfor %}
+</section>
+
+<section class="section split">
+  <div class="panel">
+    <div class="panel-title"><span>Сравнение на атрибути</span></div>
+    {% set attributes = [
+      ('Оценка', 'overall'), ('Потенциал', 'potential'), ('Скорост', 'pace'), ('Удар', 'shooting'),
+      ('Пасове', 'passing'), ('Дрибъл', 'dribbling'), ('Защита', 'defending'), ('Физика', 'physical'),
+      ('Визия', 'vision'), ('Позициониране', 'positioning'), ('Самообладание', 'composure'),
+      ('Отборна игра', 'teamwork'), ('Издръжливост', 'stamina'), ('Дисциплина', 'discipline'),
+      ('Форма', 'form'), ('Физическо състояние', 'fitness')
+    ] %}
+    <div class="table-wrap">
+      <table class="data">
+        <thead>
+          <tr>
+            <th>Атрибут</th>
+            {% for item in selected %}<th style="text-align:right">{{ item.name }}</th>{% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for label, key in attributes %}
+          {% set values = selected | map(attribute=key) | list %}
+          {% set best = values | max %}
+          <tr>
+            <td style="color: var(--text)">{{ label }}</td>
+            {% for value in values %}
+              <td class="num {{ 'best' if value == best and selected|length > 1 }}">{{ value }}</td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+          <tr>
+            <td style="color: var(--text)">Пазарна стойност</td>
+            {% for item in selected %}
+              <td class="num">{{ money(item.market_value) }}</td>
+            {% endfor %}
+          </tr>
+          <tr>
+            <td style="color: var(--text)">Възраст</td>
+            {% for item in selected %}<td class="num">{{ item.age }}</td>{% endfor %}
+          </tr>
+          <tr>
+            <td style="color: var(--text)">AI скор</td>
+            {% for item in selected %}
+              <td class="num best">{{ "%.0f"|format(analyses.get(item.id).score) if analyses.get(item.id) else '-' }}</td>
+            {% endfor %}
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title"><span>Радарно сравнение</span></div>
+    <div id="chart-compare-radar" data-chart="radar" data-payload='{{ radar_payload | tojson }}' data-max="99"></div>
+    <div class="legend">
+      {% for series in radar_series %}
+        <span><i style="background: {{ series.color }}"></i>{{ series.name }}</span>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+{% if history %}
+<section class="section">
+  <div class="section-head">
+    <div>
+      <h2>Сезонна статистика</h2>
+      <p class="subtitle">Голове, асисти и участие по сезон.</p>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="table-wrap">
+      <table class="data">
+        <thead>
+          <tr>
+            <th>Играч</th><th>Сезон</th><th>Мачове</th><th>Минути</th>
+            <th>Голове</th><th>Асисти</th><th>Пасове %</th><th>Дуели %</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in history %}
+          <tr>
+            <td style="color: var(--text); font-weight: 600">{{ row.player_name }}</td>
+            <td>{{ row.season }}</td>
+            <td class="num">{{ row.appearances }}</td>
+            <td class="num">{{ row.minutes }}</td>
+            <td class="num">{{ row.goals }}</td>
+            <td class="num">{{ row.assists }}</td>
+            <td class="num">{{ "%.1f"|format(row.pass_accuracy) }}%</td>
+            <td class="num">{{ "%.1f"|format(row.duels_won_pct) }}%</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+{% endif %}
+
+{% else %}
+<div class="empty-state">
+  <div class="big">⚖️</div>
+  <p>Изберете поне двама футболиста от полетата по-горе, за да сравните профилите им.</p>
+  <p style="margin-top: 0.75rem"><a class="button small" href="{{ url_for('players') }}">Към списъка с футболисти</a></p>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+{% from "_macros.html" import score_ring, money, position_color %}
+
+{% block title %}{{ player.name }} — Football Intelligence Platform{% endblock %}
+
+{% block content %}
+{% set color = position_color(player.position) %}
+{% set radar_attrs = [
+  ('Скорост', player.pace), ('Удар', player.shooting), ('Пасове', player.passing),
+  ('Дрибъл', player.dribbling), ('Защита', player.defending), ('Физика', player.physical)
+] %}
+{% set radar_items = [] %}
+{% for label, value in radar_attrs %}
+  {% set _ = radar_items.append({'label': label, 'value': value}) %}
+{% endfor %}
+{% set season_items = [] %}
+{% for row in stats %}
+  {% set _ = season_items.append({'label': row.season, 'goals': row.goals, 'assists': row.assists}) %}
+{% endfor %}
+{% set component_labels = {
+  'performance': 'Прогноза за форма', 'position_fit': 'Съвместимост с ролята',
+  'availability': 'Наличност', 'value': 'Стойност за парите', 'age_fit': 'Възрастов профил'
+} %}
+
+<section class="panel" style="margin-bottom: 1.5rem">
+  <div style="display: flex; gap: 1.75rem; align-items: center; flex-wrap: wrap">
+    <div class="ring-stack">
+      {{ score_ring(player.overall, 'ОЦЕНКА', color) }}
+    </div>
+
+    <div style="flex: 1; min-width: 260px">
+      <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap">
+        <h1 style="font-size: clamp(1.6rem, 3vw, 2.3rem)">{{ player.name }}</h1>
+        <span class="pos-chip" style="--pos-color: {{ color }}">{{ position_labels.get(player.position, player.position) }}</span>
+      </div>
+      <p class="meta" style="color: var(--muted); margin-top: 0.4rem">
+        <span class="tag team" style="--team-color: {{ player.team_color or '#22d37a' }}">{{ player.team_name or 'Без отбор' }}</span>
+        <span class="tag">{{ player.age }} години</span>
+        <span class="tag">{{ player.nationality }}</span>
+        <span class="tag">{{ player.height_cm }} см</span>
+        <span class="tag">Силна крачка: {{ player.preferred_foot }}</span>
+        <span class="tag">Договор: {{ player.contract_years }} г.</span>
+      </p>
+      <div class="card-stats" style="margin-top: 1rem; gap: 1.75rem">
+        <div><span class="k">Потенциал</span><span class="v">{{ player.potential }}</span></div>
+        <div><span class="k">Пазарна стойност</span><span class="v">{{ money(player.market_value) }}</span></div>
+        <div><span class="k">Форма</span><span class="v">{{ player.form }}</span></div>
+        <div><span class="k">Риск от нараняване</span><span class="v">{{ player.injury_risk }}%</span></div>
+        <div><span class="k">AI скор</span><span class="v" style="color: var(--accent)">{{ "%.0f"|format(analysis.score) }}</span></div>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 0.6rem; flex-wrap: wrap">
+      <a class="button small" href="{{ url_for('compare', ids=player.id) }}">Сравни</a>
+      <a class="button small primary" href="{{ url_for('recommendations') }}">Препоръки</a>
+    </div>
+  </div>
+</section>
+
+<section class="section split">
+  <div class="panel">
+    <div class="panel-title"><span>Атрибути · {{ player.name }}</span><span class="tag">0 – 99</span></div>
+    <div class="attr-grid">
+      {% for label, value in [
+        ('Скорост', player.pace), ('Удар', player.shooting), ('Пасове', player.passing),
+        ('Дрибъл', player.dribbling), ('Защита', player.defending), ('Физика', player.physical),
+        ('Визия', player.vision), ('Позициониране', player.positioning), ('Самообладание', player.composure),
+        ('Отборна игра', player.teamwork), ('Издръжливост', player.stamina), ('Дисциплина', player.discipline),
+        ('Форма', player.form), ('Физическо състояние', player.fitness), ('Риск от нараняване', 100 - player.injury_risk)
+      ] %}
+      <div class="attr-row">
+        <span class="attr-label">{{ label }}</span>
+        <span class="attr-value">{{ value }}</span>
+        <span class="attr-bar"><span style="width: {{ value }}%"></span></span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title"><span>Профил на играча</span></div>
+    <div id="chart-radar" data-chart="radar" data-items='{{ radar_items | tojson }}' data-max="99"></div>
+  </div>
+</section>
+
+<section class="section split">
+  <div class="panel">
+    <div class="panel-title">
+      <span>Сезонна производителност</span>
+      <span class="tag">Голове и асисти</span>
+    </div>
+    {% if stats %}
+      <div id="chart-seasons" data-chart="grouped-bars" data-items='{{ season_items | tojson }}'></div>
+    {% else %}
+      <p class="result-count">Няма регистрирани сезонни статистики.</p>
+    {% endif %}
+  </div>
+
+  <div class="panel">
+    <div class="panel-title"><span>Обяснение на AI оценката</span></div>
+    <div class="components" style="margin-bottom: 1rem">
+      {% for key, value in analysis.components.items() %}
+        <span class="component">{{ component_labels.get(key, key) }}: <b>{{ "%.0f"|format(value) }}</b></span>
+      {% endfor %}
+    </div>
+    <ul class="reason-list">
+      {% for reason in analysis.reasons %}
+        <li>{{ reason }}</li>
+      {% endfor %}
+    </ul>
+    {% if analysis.warnings %}
+    <div class="divider"></div>
+    <ul class="reason-list warn">
+      {% for warning in analysis.warnings %}
+        <li>{{ warning }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-head">
+    <div>
+      <h2>Кариера по сезони</h2>
+      <p class="subtitle">Детайлни показатели от базата данни.</p>
+    </div>
+  </div>
+  {% if stats %}
+  <div class="panel">
+    <div class="table-wrap">
+      <table class="data">
+        <thead>
+          <tr>
+            <th>Сезон</th><th>Мачове</th><th>Минути</th><th>Голове</th><th>Асисти</th>
+            <th>Удари</th><th>Ключови пасове</th><th>Пасове %</th><th>Дуели %</th>
+            <th>Жълти</th><th>Червени</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in stats %}
+          <tr>
+            <td style="color: var(--text); font-weight: 600">{{ row.season }}</td>
+            <td class="num">{{ row.appearances }}</td>
+            <td class="num">{{ row.minutes }}</td>
+            <td class="num">{{ row.goals }}</td>
+            <td class="num">{{ row.assists }}</td>
+            <td class="num">{{ row.shots }}</td>
+            <td class="num">{{ row.key_passes }}</td>
+            <td class="num">{{ "%.1f"|format(row.pass_accuracy) }}%</td>
+            <td class="num">{{ "%.1f"|format(row.duels_won_pct) }}%</td>
+            <td class="num">{{ row.yellow_cards }}</td>
+            <td class="num">{{ row.red_cards }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% else %}
+  <div class="empty-state"><p>Няма сезонни данни за този играч.</p></div>
+  {% endif %}
+</section>
+
+{% if similar %}
+<section class="section">
+  <div class="section-head">
+    <div>
+      <h2>Подобни играчи</h2>
+      <p class="subtitle">Същата позиция и сходен профил на атрибутите.</p>
+    </div>
+  </div>
+  <div class="grid-3">
+    {% for other in similar %}
+    <article class="player-card" style="--pos-color: {{ position_color(other.position) }}">
+      <div class="card-top">
+        <div>
+          <a class="name" href="{{ url_for('player_detail', player_id=other.id) }}">{{ other.name }}</a>
+          <div class="meta">{{ other.team_name or 'Без отбор' }}<span class="dot">•</span>{{ other.age }} г.</div>
+        </div>
+        <div class="ring" style="--pct: {{ other.overall }}; --ring-color: {{ position_color(other.position) }}">
+          <div class="ring-value">{{ other.overall }}</div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <a href="{{ url_for('player_detail', player_id=other.id) }}">Профил →</a>
+        <a href="{{ url_for('compare', ids=player.id ~ ',' ~ other.id) }}">Сравни</a>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+{% endblock %}

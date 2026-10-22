@@ -1,0 +1,64 @@
+{% macro position_color(position) -%}
+  {%- if position == 'GK' -%}#38bdf8
+  {%- elif position in ('CB', 'LB', 'RB') -%}#a78bfa
+  {%- elif position in ('CDM', 'CM', 'CAM') -%}#34d399
+  {%- else -%}#fb7185
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro position_label(position, labels) -%}
+  {{- labels.get(position, position) -}}
+{%- endmacro %}
+
+{% macro money(value) -%}
+  {%- set v = value or 0 -%}
+  {%- if v >= 1000000 -%}
+    {{ "%.1f"|format(v / 1000000) }} млн. €
+  {%- elif v >= 1000 -%}
+    {{ "%.0f"|format(v / 1000) }} хил. €
+  {%- else -%}
+    {{ "%.0f"|format(v) }} €
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro score_ring(value, label='', color='var(--accent)', size='') -%}
+<div class="ring {{ size }}" style="--pct: {{ value }}; --ring-color: {{ color }}">
+  <div style="position: relative; text-align: center">
+    <div class="ring-value">{{ value }}</div>
+    {% if label %}<div class="ring-label">{{ label }}</div>{% endif %}
+  </div>
+</div>
+{%- endmacro %}
+
+{% macro player_card(player, position_labels) -%}
+{% set color = position_color(player.position) %}
+<article class="player-card" style="--pos-color: {{ color }}">
+  <div class="card-top">
+    <div>
+      <a class="name" href="{{ url_for('player_detail', player_id=player.id) }}">{{ player.name }}</a>
+      <div class="meta">
+        {{ player.team_name or 'Без отбор' }}<span class="dot">•</span>{{ player.age }} г.<span class="dot">•</span>{{ player.nationality }}
+      </div>
+    </div>
+    {{ score_ring(player.overall, color=color) }}
+  </div>
+
+  <div style="display: flex; gap: 0.4rem; flex-wrap: wrap">
+    <span class="pos-chip" style="--pos-color: {{ color }}">{{ position_label(player.position, position_labels) }}</span>
+    <span class="tag">Потенциал {{ player.potential }}</span>
+    <span class="tag team" style="--team-color: {{ player.team_color or '#22d37a' }}">{{ money(player.market_value) }}</span>
+  </div>
+
+  <div class="card-stats">
+    <div><span class="k">Скорост</span><span class="v">{{ player.pace }}</span></div>
+    <div><span class="k">Удар</span><span class="v">{{ player.shooting }}</span></div>
+    <div><span class="k">Пас</span><span class="v">{{ player.passing }}</span></div>
+    <div><span class="k">Форма</span><span class="v">{{ player.form }}</span></div>
+  </div>
+
+  <div class="card-footer">
+    <a href="{{ url_for('player_detail', player_id=player.id) }}">Пълен профил →</a>
+    <a href="{{ url_for('compare', ids=player.id) }}">Сравни</a>
+  </div>
+</article>
+{%- endmacro %}

@@ -4,8 +4,12 @@
 
 {% block content %}
 <section class="error-page">
-  <h1>404</h1>
+  <div class="code">404</div>
   <h2>Страницата не е намерена</h2>
-  <p>Търсеният адрес не съществува. Върни се към <a href="{{ url_for('index') }}">началната страница</a>.</p>
+  <p>Търсеният адрес не съществува или страницата е преместена.</p>
+  <div class="hero-actions" style="justify-content: center">
+    <a class="button primary" href="{{ url_for('index') }}">Към началната страница</a>
+    <a class="button ghost" href="{{ url_for('players') }}">Търси футболисти</a>
+  </div>
 </section>
 {% endblock %}

@@ -1,35 +1,153 @@
 {% extends "base.html" %}
+{% from "_macros.html" import player_card, score_ring, money, position_color %}
 
 {% block title %}Начало — Football Intelligence Platform{% endblock %}
 
 {% block content %}
+{% set position_items = [] %}
+{% for item in distribution %}
+  {% set _ = position_items.append({'label': position_labels.get(item.position, item.position), 'value': item.count, 'color': position_color(item.position)}) %}
+{% endfor %}
+{% set team_items = [] %}
+{% for item in teams %}
+  {% set _ = team_items.append({'label': item.short_name, 'value': item.avg_overall, 'color': item.color}) %}
+{% endfor %}
 <section class="hero">
   <div class="hero-content">
-    <span class="badge">Етап 1 · Основа</span>
-    <h1>Football Intelligence Platform</h1>
+    <span class="eyebrow"><span class="pulse-dot"></span>Платформа в работен режим</span>
+    <h1>Интелигентен <span class="gradient-text">футболен скаутинг</span> на едно място</h1>
     <p>
-      Интелигентна платформа за футболен скаутинг, която ще комбинира
-      база данни, машинно обучение и AI асистент за препоръчване на
-      футболисти според нуждите на отбора.
+      Платформата обединява структурирана база данни за футболисти, машинно обучение,
+      обучено върху исторически сезони, и AI асистент, който препоръчва играчи според
+      реалните нужди на отбора — и обяснява защо всеки играч е избран.
     </p>
     <div class="hero-actions">
-      <a class="button primary" href="{{ url_for('health') }}">Проверка на статуса</a>
+      <a class="button primary" href="{{ url_for('players') }}">Търси футболист</a>
+      <a class="button" href="{{ url_for('recommendations') }}">Препоръки по отбор</a>
+      <a class="button ghost" href="{{ url_for('assistant') }}">Отвори AI асистента</a>
     </div>
   </div>
 </section>
 
-<section class="cards">
-  <article class="card">
-    <h2>Какво е готово</h2>
-    <p>Базова структура на проекта, Flask приложение, SQLite връзка, начална страница и стилове.</p>
-  </article>
-  <article class="card">
-    <h2>Какво следва</h2>
-    <p>Модел на базата данни, CRUD за играчи, търсене/филтриране и готов интерфейс.</p>
-  </article>
-  <article class="card">
-    <h2>Технологии</h2>
-    <p>Python, Flask, SQLite, Jinja2 шаблони, HTML, CSS и JavaScript.</p>
-  </article>
+<section class="stat-grid">
+  <div class="stat-tile">
+    <span class="label">Футболисти в базата</span>
+    <span class="value">{{ overview.players }}</span>
+    <span class="hint">{{ overview.avg_age }} г. средна възраст</span>
+  </div>
+  <div class="stat-tile">
+    <span class="label">Отбори в лигата</span>
+    <span class="value">{{ overview.teams }}</span>
+    <span class="hint">{{ overview.latest_season }} – последен сезон</span>
+  </div>
+  <div class="stat-tile">
+    <span class="label">Сезонни наблюдения</span>
+    <span class="value">{{ overview.stat_rows }}</span>
+    <span class="hint">{{ overview.seasons }} сезона в обучението</span>
+  </div>
+  <div class="stat-tile">
+    <span class="label">Голове + асисти</span>
+    <span class="value">{{ overview.goals + overview.assists }}</span>
+    <span class="hint">общо от регистрираните мачове</span>
+  </div>
+  {% if model %}
+  <div class="stat-tile">
+    <span class="label">Точност на модела</span>
+    <span class="value">{{ "%.0f"|format(model.metrics.test.accuracy * 100) }}%</span>
+    <span class="hint">AUC {{ "%.3f"|format(model.metrics.test.auc) }} · тестова извадка</span>
+  </div>
+  {% endif %}
+</section>
+
+<section class="section">
+  <div class="section-head">
+    <div>
+      <h2>Най-ценните футболисти в базата</h2>
+      <p class="subtitle">Класиране по общата оценка, изчислена от 15 атрибута и сезонната производителност.</p>
+    </div>
+    <a class="button small" href="{{ url_for('players') }}">Виж всички →</a>
+  </div>
+  <div class="grid-4">
+    {% for player in top_players %}
+      {{ player_card(player, position_labels) }}
+    {% endfor %}
+  </div>
+</section>
+
+<section class="section split">
+  <div class="panel">
+    <div class="panel-title">
+      <span>Водещи реализатори · {{ overview.latest_season }}</span>
+      <span class="tag">Голове + асисти</span>
+    </div>
+    {% for leader in leaders %}
+    <div class="leader-row">
+      <span class="leader-rank">{{ loop.index }}</span>
+      <div>
+        <a class="leader-name" href="{{ url_for('player_detail', player_id=leader.id) }}">{{ leader.name }}</a>
+        <div class="leader-meta">
+          <span class="pos-chip" style="--pos-color: {{ position_color(leader.position) }}">{{ position_labels.get(leader.position, leader.position) }}</span>
+          {{ leader.team_name or 'Без отбор' }} · {{ leader.goals }} гола · {{ leader.assists }} асиста · {{ leader.appearances }} мача
+        </div>
+      </div>
+      <span class="leader-score">{{ leader.goals + leader.assists }}</span>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="panel">
+    <div class="panel-title"><span>Разпределение по позиции</span></div>
+    <div id="chart-positions" data-chart="donut" data-items='{{ position_items | tojson }}'></div>
+    <p class="note" style="margin-top: 1rem">
+      Моделът разглежда всяка позиция с отделни теглова матрици, за да препоръчва
+      подходящ профил, а не просто най-високата обща оценка.
+    </p>
+  </div>
+</section>
+
+<section class="section split-even">
+  <div class="panel">
+    <div class="panel-title"><span>Средна оценка на отборите</span></div>
+    <div id="chart-teams" data-chart="bars" data-items='{{ team_items | tojson }}' data-unit="точки"></div>
+  </div>
+  <div class="panel">
+    <div class="panel-title"><span>Как работи платформата</span></div>
+    <div class="grid-3" style="gap: 0.85rem">
+      <div class="step">
+        <div class="step-num">01 · ДАННИ</div>
+        <h3>База данни</h3>
+        <p>{{ overview.stat_rows }} сезонни реда за {{ overview.players }} играчи в {{ overview.teams }} отбора.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">02 · МОДЕЛ</div>
+        <h3>Машинно обучение</h3>
+        <p>Логистична регресия, обучена от нулата, за прогноза на силна кампания.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">03 · РЕШЕНИЕ</div>
+        <h3>Препоръки с обяснение</h3>
+        <p>Ранжиране спрямо заявката на отбора и ясна обосновка за всеки избор.</p>
+      </div>
+    </div>
+
+    {% if model %}
+    <div class="divider"></div>
+    <div class="panel-title"><span>Метрики на обучения модел</span></div>
+    <div class="table-wrap">
+      <table class="data">
+        <thead>
+          <tr><th>Метрика</th><th>Тренировъчна</th><th>Тестова</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Accuracy</td><td class="num">{{ "%.3f"|format(model.metrics.train.accuracy) }}</td><td class="num best">{{ "%.3f"|format(model.metrics.test.accuracy) }}</td></tr>
+          <tr><td>Precision</td><td class="num">{{ "%.3f"|format(model.metrics.train.precision) }}</td><td class="num best">{{ "%.3f"|format(model.metrics.test.precision) }}</td></tr>
+          <tr><td>Recall</td><td class="num">{{ "%.3f"|format(model.metrics.train.recall) }}</td><td class="num best">{{ "%.3f"|format(model.metrics.test.recall) }}</td></tr>
+          <tr><td>F1 score</td><td class="num">{{ "%.3f"|format(model.metrics.train.f1) }}</td><td class="num best">{{ "%.3f"|format(model.metrics.test.f1) }}</td></tr>
+          <tr><td>AUC</td><td class="num">{{ "%.3f"|format(model.metrics.train.auc) }}</td><td class="num best">{{ "%.3f"|format(model.metrics.test.auc) }}</td></tr>
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </div>
 </section>
 {% endblock %}

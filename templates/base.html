@@ -3,20 +3,38 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Интелигентна платформа за футболен скаутинг: база данни, машинно обучение и AI асистент за препоръки на футболисти." />
   <title>{% block title %}Football Intelligence Platform{% endblock %}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@600;700&display=swap" />
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>⚽</text></svg>" />
   {% block extra_head %}{% endblock %}
 </head>
 <body>
   <header class="site-header">
     <div class="container header-inner">
-      <a class="brand" href="{{ url_for('index') }}">Football Intelligence Platform</a>
+      <a class="brand" href="{{ url_for('index') }}">
+        <span class="brand-mark">FI</span>
+        <span>
+          Football Intelligence
+          <small>Scouting Platform</small>
+        </span>
+      </a>
+
       <nav class="site-nav" aria-label="Основна навигация">
-        <a href="{{ url_for('index') }}">Начало</a>
-        <a href="{{ url_for('health') }}">Статус</a>
+        <a href="{{ url_for('index') }}" class="{{ 'active' if request.endpoint == 'index' }}">Начало</a>
+        <a href="{{ url_for('players') }}" class="{{ 'active' if request.endpoint in ('players', 'player_detail') }}">Футболисти</a>
+        <a href="{{ url_for('recommendations') }}" class="{{ 'active' if request.endpoint == 'recommendations' }}">Препоръки</a>
+        <a href="{{ url_for('compare') }}" class="{{ 'active' if request.endpoint == 'compare' }}">Сравнение</a>
+        <a href="{{ url_for('assistant') }}" class="{{ 'active' if request.endpoint == 'assistant' }}">AI Асистент</a>
       </nav>
+
+      <div class="header-status">
+        <span class="pulse-dot"></span>
+        Система онлайн
+      </div>
     </div>
   </header>
 
@@ -27,11 +45,13 @@
   </main>
 
   <footer class="site-footer">
-    <div class="container">
-      <p>© Football Intelligence Platform — етап 1: основа на проекта.</p>
+    <div class="container footer-inner">
+      <p>© Football Intelligence Platform · ML препоръки за футболен скаутинг.</p>
+      <p>Демо набор от синтетични данни · <a href="{{ url_for('health') }}">API статус</a></p>
     </div>
   </footer>
 
+  <script src="{{ url_for('static', filename='js/charts.js') }}"></script>
   <script src="{{ url_for('static', filename='js/main.js') }}"></script>
   {% block extra_scripts %}{% endblock %}
 </body>

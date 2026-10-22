@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% from "_macros.html" import score_ring, money, position_color %}
+
+{% block title %}Препоръки — Football Intelligence Platform{% endblock %}
+
+{% block content %}
+{% set component_labels = {
+  'performance': 'Прогноза за форма', 'position_fit': 'Съвместимост с ролята',
+  'availability': 'Наличност', 'value': 'Стойност за парите', 'age_fit': 'Възрастов профил'
+} %}
+
+<section class="section-head">
+  <div>
+    <h2>ML препоръки по нуждите на отбора</h2>
+    <p class="subtitle">Избира се отбор и позиция – системата ранжира играчите и обяснява избора.</p>
+  </div>
+  <a class="button small" href="{{ url_for('assistant') }}">Попитай AI асистента →</a>
+</section>
+
+<section class="section split">
+  <div class="panel">
+    <div class="panel-title"><span>Избери отбор</span></div>
+    <div class="grid-2" style="gap: 0.6rem">
+      {% for item in teams %}
+      <a class="team-card" href="{{ url_for('recommendations', team=item.id) }}"
+         style="--team-color: {{ item.color }}; {{ 'border-color: ' ~ item.color if team and team.id == item.id }}">
+        <span class="team-badge">{{ item.short_name[:2] | upper }}</span>
+        <span>
+          <span class="team-name">{{ item.name }}</span>
+          <span class="team-meta">{{ item.player_count }} играчи в състава</span>
+        </span>
+      </a>
+      {% endfor %}
+    </div>
+
+    {% if needs %}
+    <div class="divider"></div>
+    <div class="panel-title"><span>Заявки на отбора</span></div>
+    <div class="grid-2" style="gap: 0.6rem">
+      {% for item in needs %}
+      <a class="team-card"
+         href="{{ url_for('recommendations', team=team.id, position=item.position) }}"
+         style="--team-color: {{ item.team_color }}; {{ 'border-color: ' ~ item.team_color if need and need.id == item.id }}">
+        <span class="team-badge" style="background: rgba(148,163,184,0.08); border-color: var(--border); color: var(--text-soft)">
+          P{{ item.priority }}
+        </span>
+        <span>
+          <span class="team-name">{{ position_labels.get(item.position, item.position) }}</span>
+          <span class="team-meta">Мин. оценка {{ item.min_overall }} · до {{ item.max_age }} г. · до {{ money(item.max_value) }}</span>
+        </span>
+      </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="panel">
+    {% if need and team %}
+      <div class="panel-title"><span>Активна заявка</span></div>
+      <h3 style="font-size: 1.25rem; margin-bottom: 0.4rem">
+        {{ position_labels.get(need.position, need.position) }} · {{ team.name }}
+      </h3>
+      <p class="result-count" style="margin-bottom: 1rem">{{ need.notes or 'Няма допълнителни изисквания.' }}</p>
+      <div class="components">
+        <span class="component">Приоритет: <b>{{ need.priority }}</b></span>
+        <span class="component">Мин. оценка: <b>{{ need.min_overall }}</b></span>
+        <span class="component">Макс. възраст: <b>{{ need.max_age }}</b></span>
+        <span class="component">Бюджет: <b>{{ money(need.max_value) }}</b></span>
+      </div>
+      <div class="divider"></div>
+      <p class="note">
+        Формулата на оценката: <b>32% прогноза на модела</b>, <b>28% съвместимост с ролята</b>,
+        <b>16% наличност</b>, <b>12% стойност за парите</b>, <b>12% възрастов профил</b>.
+        Игри, които не отговарят на заявката, не се скриват – те получават намаление и са маркирани с предупреждение.
+      </p>
+    {% else %}
+      <div class="panel-title"><span>Активна заявка</span></div>
+      <p class="result-count">Изберете отбор, за да видите конкретните позиции, които той търси.</p>
+    {% endif %}
+  </div>
+</section>
+
+{% if ranked %}
+<section class="section">
+  <div class="section-head">
+    <div>
+      <h2>Топ {{ ranked|length }} препоръки</h2>
+      <p class="subtitle">Ранжирано по общата оценка на модела за ролята „{{ position_labels.get(need.position, need.position) }}“.</p>
+    </div>
+  </div>
+
+  <div class="grid-2" style="gap: 1rem">
+    {% for item in ranked %}
+    {% set player = item.player %}
+    <article class="recommendation-card">
+      <span class="rank">{{ loop.index }}</span>
+
+      <div>
+        <div class="recommendation-head">
+          <a class="name" href="{{ url_for('player_detail', player_id=player.id) }}">{{ player.name }}</a>
+          <span class="pos-chip" style="--pos-color: {{ position_color(player.position) }}">
+            {{ position_labels.get(player.position, player.position) }}
+          </span>
+          <span class="tag team" style="--team-color: {{ player.team_color or '#22d37a' }}">{{ player.team_name or 'Без отбор' }}</span>
+        </div>
+
+        <div class="meta" style="color: var(--muted); font-size: 0.86rem">
+          {{ player.age }} г. · {{ player.nationality }} · оценка {{ player.overall }} (потенциал {{ player.potential }}) · {{ money(player.market_value) }}
+        </div>
+
+        <ul class="reason-list" style="margin-top: 0.85rem">
+          {% for reason in item.reasons %}<li>{{ reason }}</li>{% endfor %}
+        </ul>
+
+        {% if item.warnings %}
+        <ul class="reason-list warn" style="margin-top: 0.5rem">
+          {% for warning in item.warnings %}<li>{{ warning }}</li>{% endfor %}
+        </ul>
+        {% endif %}
+
+        <div class="components">
+          {% for key, value in item.components.items() %}
+            <span class="component">{{ component_labels.get(key, key) }}: <b>{{ "%.0f"|format(value) }}</b></span>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="ring-stack">
+        {{ score_ring("%.0f"|format(item.score) | int, 'СКОР', 'var(--accent)') }}
+        <a class="button small ghost" href="{{ url_for('compare', ids=player.id) }}">Сравни</a>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+{% else %}
+<div class="empty-state">
+  <div class="big">🎯</div>
+  <p>Изберете отбор и позиция, за да получите персонализирани препоръки.</p>
+</div>
+{% endif %}
+{% endblock %}

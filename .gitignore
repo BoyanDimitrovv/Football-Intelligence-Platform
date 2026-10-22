@@ -1,7 +1,27 @@
 __pycache__/
 *.pyc
 *.pyo
+*.egg-info/
+.pytest_cache/
+
+# Virtualenv
+.venv/
+venv/
+env/
+
+# Secrets / local configuration
 .env
+.env.*
+!.env.example
+
+# Generated artifacts (rebuilt with `python -m database.seed` / `python -m ml.train`)
 *.sqlite
 *.db
-.venv/
+ml/model.json
+data/raw/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

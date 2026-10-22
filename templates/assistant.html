@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}AI Асистент — Football Intelligence Platform{% endblock %}
+
+{% block content %}
+<section class="section-head">
+  <div>
+    <h2>AI скаутинг асистент</h2>
+    <p class="subtitle">
+      Задавайте въпроси на естествен език – асистентът разбира намерението, намира играчите
+      в базата и използва обучения ML модел, за да отговори.
+    </p>
+  </div>
+  <div class="header-status">
+    <span class="pulse-dot"></span>
+    {{ 'LLM свързан' if llm_available else 'Локален модел · работи офлайн' }}
+  </div>
+</section>
+
+<section class="section chat-layout">
+  <div class="chat-window">
+    <div class="chat-header">
+      <div style="display: flex; align-items: center; gap: 0.7rem">
+        <span class="brand-mark" style="width: 32px; height: 32px; border-radius: 9px; font-size: 0.8rem">AI</span>
+        <div>
+          <strong style="font-size: 0.95rem">Скаутинг асистент</strong>
+          <div style="font-size: 0.76rem; color: var(--muted)">Разбира въпроси на български</div>
+        </div>
+      </div>
+      <button class="button small ghost" type="button" id="chat-clear">Нов разговор</button>
+    </div>
+
+    <div class="chat-messages" id="chat-messages">
+      <div class="message bot">
+        <div class="avatar">AI</div>
+        <div class="bubble">
+          Здравей! Аз съм скаутинг асистентът на платформата. Помогвам с търсене на
+          футболисти, препоръки по позиция, сравнение на играчи и статистика от базата данни.<br><br>
+          Опитай например: <code>препоръчай нападател за ЦСКА</code> или
+          <code>сравни Маркус Думини и Йоан Коста</code>.
+        </div>
+      </div>
+    </div>
+
+    <form class="chat-input" id="chat-form">
+      <input type="text" id="chat-question" autocomplete="off"
+             placeholder="Напиши въпрос, например: „топ 5 защитници в лигата“" />
+      <button class="button primary" type="submit">Изпрати</button>
+    </form>
+  </div>
+
+  <div>
+    <div class="panel" style="margin-bottom: 1.25rem">
+      <div class="panel-title"><span>Бързи въпроси</span></div>
+      <div class="suggestion-chips" id="suggestion-chips">
+        <button class="chip" type="button">Топ 5 нападатели в лигата</button>
+        <button class="chip" type="button">Препоръчай защитник за Локомотив</button>
+        <button class="chip" type="button">Сравни Рафинхо Сантос и Адриан Милчев</button>
+        <button class="chip" type="button">Покажи ми всички вратари</button>
+        <button class="chip" type="button">Кой е Кристиян Златев</button>
+        <button class="chip" type="button">Най-скъпите играчи в базата</button>
+      </div>
+      <p class="note">
+        Асистентът работи офлайн върху реалните данни в базата. Ако е наличен ключ за
+        външен LLM ({{ 'конфигуриран' if llm_available else 'липсва' }}), отговорите могат да се
+        обогатят допълнително.
+      </p>
+    </div>
+
+    <div class="panel" style="margin-bottom: 1.25rem">
+      <div class="panel-title"><span>Отбори в системата</span></div>
+      <div class="grid-2" style="gap: 0.5rem">
+        {% for team in teams %}
+        <div class="team-card" style="--team-color: {{ team.color }}">
+          <span class="team-badge">{{ team.short_name[:2] | upper }}</span>
+          <span>
+            <span class="team-name">{{ team.short_name }}</span>
+            <span class="team-meta">{{ team.player_count }} играчи</span>
+          </span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title"><span>Водещи реализатори</span></div>
+      {% for leader in leaders %}
+      <div class="leader-row">
+        <span class="leader-rank">{{ loop.index }}</span>
+        <div>
+          <a class="leader-name" href="{{ url_for('player_detail', player_id=leader.id) }}">{{ leader.name }}</a>
+          <div class="leader-meta">{{ leader.team_name }} · {{ leader.goals }} гола · {{ leader.assists }} асиста</div>
+        </div>
+        <span class="leader-score">{{ leader.goals + leader.assists }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock %}

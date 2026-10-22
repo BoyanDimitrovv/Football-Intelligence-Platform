@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+{% from "_macros.html" import player_card, position_color, position_label, money %}
+
+{% block title %}Футболисти — Football Intelligence Platform{% endblock %}
+
+{% block content %}
+<section class="section-head">
+  <div>
+    <h2>Скаутска база</h2>
+    <p class="subtitle">Търсете и филтрирайте измежду {{ total }} футболиста от {{ teams|length }} отбора.</p>
+  </div>
+  <a class="button small" href="{{ url_for('recommendations') }}">Препоръки по отбор →</a>
+</section>
+
+<form class="filter-panel" method="get" action="{{ url_for('players') }}" id="filter-form">
+  <div class="filter-grid">
+    <div class="field">
+      <label for="q">Търсене</label>
+      <input type="search" id="q" name="q" value="{{ filters.q }}" placeholder="Име, отбор или националност" />
+    </div>
+
+    <div class="field">
+      <label for="position">Позиция</label>
+      <select id="position" name="position">
+        <option value="">Всички позиции</option>
+        {% for item in positions %}
+          <option value="{{ item.code }}" {{ 'selected' if filters.position == item.code }}>{{ item.label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="team">Отбор</label>
+      <select id="team" name="team">
+        <option value="">Всички отбори</option>
+        {% for team in teams %}
+          <option value="{{ team.id }}" {{ 'selected' if filters.team == team.id }}>{{ team.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="nationality">Националност</label>
+      <select id="nationality" name="nationality">
+        <option value="">Всички</option>
+        {% for nation in nationalities %}
+          <option value="{{ nation }}" {{ 'selected' if filters.nationality == nation }}>{{ nation }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="age_min">Възраст от</label>
+      <input type="number" id="age_min" name="age_min" value="{{ filters.age_min }}" min="15" max="45" placeholder="18" />
+    </div>
+
+    <div class="field">
+      <label for="age_max">Възраст до</label>
+      <input type="number" id="age_max" name="age_max" value="{{ filters.age_max }}" min="15" max="45" placeholder="35" />
+    </div>
+
+    <div class="field">
+      <label for="min_overall">Мин. оценка: <span id="overall-output">{{ filters.min_overall or 0 }}</span></label>
+      <input type="range" id="min_overall" name="min_overall" min="0" max="95" step="1" value="{{ filters.min_overall or 0 }}" />
+    </div>
+
+    <div class="field">
+      <label for="max_value">Макс. стойност (млн. €)</label>
+      <input type="number" id="max_value" name="max_value" value="{{ filters.max_value }}" min="0" step="0.5" placeholder="без лимит" />
+    </div>
+
+    <div class="field">
+      <label for="sort">Подредба</label>
+      <select id="sort" name="sort">
+        <option value="overall" {{ 'selected' if filters.sort == 'overall' }}>Оценка</option>
+        <option value="potential" {{ 'selected' if filters.sort == 'potential' }}>Потенциал</option>
+        <option value="value" {{ 'selected' if filters.sort == 'value' }}>Пазарна стойност</option>
+        <option value="age" {{ 'selected' if filters.sort == 'age' }}>Възраст</option>
+        <option value="form" {{ 'selected' if filters.sort == 'form' }}>Форма</option>
+        <option value="name" {{ 'selected' if filters.sort == 'name' }}>Име</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="order">Посока</label>
+      <select id="order" name="order">
+        <option value="desc" {{ 'selected' if filters.order != 'asc' }}>Низуване</option>
+        <option value="asc" {{ 'selected' if filters.order == 'asc' }}>Възходящо</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="filter-actions">
+    <button class="button primary" type="submit">Приложи филтрите</button>
+    <a class="button ghost" href="{{ url_for('players') }}">Изчисти</a>
+    <span class="result-count" style="margin-left:auto; align-self:center" id="result-count">
+      {{ results|length }} от {{ total }} футболиста
+    </span>
+  </div>
+</form>
+
+{% if results %}
+<div class="grid-4" id="player-grid">
+  {% for player in results %}
+    {% set color = position_color(player.position) %}
+    <article class="player-card" style="--pos-color: {{ color }}">
+      <div class="card-top">
+        <div>
+          <a class="name" href="{{ url_for('player_detail', player_id=player.id) }}">{{ player.name }}</a>
+          <div class="meta">
+            {{ player.team_name or 'Без отбор' }}<span class="dot">•</span>{{ player.age }} г.<span class="dot">•</span>{{ player.nationality }}
+          </div>
+        </div>
+        <div class="ring" style="--pct: {{ player.overall }}; --ring-color: {{ color }}">
+          <div class="ring-value">{{ player.overall }}</div>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 0.4rem; flex-wrap: wrap">
+        <span class="pos-chip" style="--pos-color: {{ color }}">{{ position_label(player.position, position_labels) }}</span>
+        <span class="tag">Потенциал {{ player.potential }}</span>
+        <span class="tag team" style="--team-color: {{ player.team_color or '#22d37a' }}">{{ money(player.market_value) }}</span>
+      </div>
+
+      <div class="card-stats">
+        <div><span class="k">Скорост</span><span class="v">{{ player.pace }}</span></div>
+        <div><span class="k">Удар</span><span class="v">{{ player.shooting }}</span></div>
+        <div><span class="k">Пас</span><span class="v">{{ player.passing }}</span></div>
+        <div><span class="k">Форма</span><span class="v">{{ player.form }}</span></div>
+      </div>
+
+      <div class="card-footer">
+        <a href="{{ url_for('player_detail', player_id=player.id) }}">Пълен профил →</a>
+        <label class="compare-toggle" style="cursor:pointer">
+          <input type="checkbox" class="compare-check" value="{{ player.id }}" style="accent-color: var(--accent)" />
+          Сравни
+        </label>
+      </div>
+    </article>
+  {% endfor %}
+</div>
+
+<div class="panel" id="compare-bar" style="margin-top: 1.5rem; position: sticky; bottom: 1rem; display: none">
+  <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap">
+    <div>
+      <strong id="compare-count">0</strong> играча избрани за сравнение
+      <div class="result-count" id="compare-names"></div>
+    </div>
+    <div style="display: flex; gap: 0.5rem">
+      <button class="button small ghost" type="button" id="compare-clear">Изчисти</button>
+      <a class="button small primary" href="#" id="compare-link">Сравни избраните</a>
+    </div>
+  </div>
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="big">🔍</div>
+  <p>Няма футболисти, отговарящи на избраните критерии.</p>
+  <p style="margin-top: 0.75rem"><a class="button small" href="{{ url_for('players') }}">Изчисти филтрите</a></p>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  window.PLAYER_COMPARE = {
+    max: 4,
+    compareUrl: "{{ url_for('compare') }}"
+  };
+</script>
+{% endblock %}
